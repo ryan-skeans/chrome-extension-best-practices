@@ -1,0 +1,32 @@
+{
+  "name": "chrome-extension-best-practices",
+  "version": "1.0.0",
+  "description": "Agent Skill for Chrome Extension Best Practices",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && node dist/build.js",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist",
+    "skill.json",
+    "src"
+  ],
+  "keywords": [
+    "chrome-extension",
+    "agent-skill",
+    "best-practices",
+    "manifest-v3"
+  ],
+  "author": "Antigravity",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryan-skeans/chrome-extension-best-practices.git"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}
