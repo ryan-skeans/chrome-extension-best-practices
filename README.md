@@ -1,26 +1,34 @@
 # Chrome Extension Best Practices - Agent Skill
 
-**Production-ready Agent Skill npm package for Chrome Extensions (Manifest V3).**
+**Production-ready Agent Skill for Chrome Extensions (Manifest V3).**
 
-This package is not primarily for human reading. It is a **machine-readable skill module** designed to be installed into coding agents (like Cursor, Claude Code, Codex, Opencode) so they can:
+This package is a **machine-readable skill module** designed to be installed into coding agents (like Cursor, Claude Code, Codex, Opencode) so they can:
+
 1.  **Detect** problematic Chrome extension patterns.
 2.  **Name** the violated best practice.
 3.  **Explain** why it matters.
 4.  **Suggest** concrete fixes.
 
-It exports authoritative, opinionated, and deterministic rules based on Google's Chrome Web Store guidelines and security best practices.
+It exports **44 authoritative rules** based on Google's Chrome Web Store guidelines, MV3 requirements, and security best practices.
 
 ## Installation
 
 ```bash
-npm install chrome-extension-best-practices
+npx add-skill ryan-skeans/chrome-extension-best-practices
 ```
 
-Or consume via an Agent Skill loader:
+## Rule Categories
 
-```bash
-npx add-skill chrome-extension-best-practices
-```
+| Category | Rules | Description |
+|----------|-------|-------------|
+| **security** | 10 | CSP, XSS prevention, message passing, web accessible resources |
+| **architecture** | 8 | Service worker lifecycle, state management, event handling |
+| **permissions** | 5 | Least privilege, activeTab, optional permissions |
+| **performance** | 4 | Programmatic injection, storage optimization, offscreen docs |
+| **ux** | 7 | Options page, popups, side panels, keyboard shortcuts |
+| **privacy** | 2 | Data minimization, permission justification |
+| **store-compliance** | 5 | Single purpose, code readability, privacy policy |
+| **networking** | 3 | declarativeNetRequest, CORS handling |
 
 ## Usage for Agents
 
@@ -36,7 +44,7 @@ const rules = agentRules;
 // (Agent Logic Here) checks file contents against rule.detection hints...
 
 // 3. Provide Feedback
-if (violated rule) {
+if (violatedRule) {
   print(rule.summary);
   print(rule.recommendation.action);
   print(rule.recommendation.after);
@@ -45,22 +53,47 @@ if (violated rule) {
 
 ### Raw JSON Access
 
-The rules are also available as a static JSON file in the distribution:
+The rules are also available as a static JSON file:
 
-`node_modules/chrome-extension-best-practices/dist/agent-rules.json`
+`dist/agent-rules.json`
 
 ## Rule Structure
 
 Each rule follows the `AgentRule` schema:
 
-*   **id**: Stable identifier (e.g., `permissions.no-all-urls`).
-*   **category**: `security`, `permissions`, `architecture`, `performance`, `ux`, `privacy`.
-*   **impact**: `high` | `medium` | `low`.
-*   **detection**: Hints for agents (files to check, regex signals).
-*   **recommendation**: `{ action, before, after }` – actionable deterministic fix.
+| Field | Description |
+|-------|-------------|
+| `id` | Stable identifier (e.g., `security.strict-csp`) |
+| `category` | `security`, `permissions`, `architecture`, `performance`, `ux`, `privacy`, `store-compliance`, `networking` |
+| `impact` | `high`, `medium`, `low` |
+| `confidence` | 0-1 score indicating detection reliability |
+| `appliesTo` | Contexts: `manifest`, `service-worker`, `content-script`, `popup`, `options-page`, `side-panel` |
+| `detection` | Hints for agents (signals, file patterns, manifest keys) |
+| `recommendation` | `{ action, before, after }` – actionable fix with examples |
+| `references` | Links to official Chrome documentation |
+
+## Example Rules
+
+### security.strict-csp
+> Enforce strict Content Security Policy. MV3 requires `script-src` and `object-src` to be `self` or `none`.
+
+### architecture.event-driven-sw
+> Service workers terminate after ~30s idle. Use `chrome.alarms` instead of `setTimeout` for scheduling.
+
+### networking.declarative-net-request
+> Prefer `declarativeNetRequest` over `webRequest` for better performance and privacy.
 
 ## Philosophy
 
-*   **Deterministic over clever**: Rules are simple and explicit.
-*   **Declarative**: Logic is properly metadata, effectively "linting for agents".
-*   **Opinionated**: Enforces Manifest V3 and strict security by default.
+-   **Deterministic over clever**: Rules are simple and explicit.
+-   **Declarative**: Metadata-driven, effectively "linting for agents".
+-   **Opinionated**: Enforces Manifest V3 and strict security by default.
+-   **Current**: Based on Chrome Web Store policies for 2024-2025.
+
+## Contributing
+
+Rules are defined in `src/rules/*.ts`. Run `npm run build` to regenerate `dist/agent-rules.json`.
+
+## License
+
+ISC
