@@ -1,0 +1,33 @@
+{
+    "name": "chrome-extension-best-practices",
+    "owner": {
+        "name": "Ryan Skeans",
+        "email": "ryan@example.com"
+    },
+    "metadata": {
+        "description": "Expert guidance and rules for building Manifest V3 Chrome Extensions, designed for AI coding agents.",
+        "version": "1.1.1",
+        "repository": "https://github.com/ryan-skeans/chrome-extension-best-practices",
+        "license": "ISC",
+        "keywords": [
+            "chrome-extension",
+            "manifest-v3",
+            "browser-extension",
+            "agent-skill",
+            "best-practices",
+            "security",
+            "web-store"
+        ]
+    },
+    "plugins": [
+        {
+            "name": "Chrome Extension Best Practices",
+            "description": "44 authoritative rules for Manifest V3 Chrome Extensions covering security, architecture, permissions, performance, UX, privacy, store compliance, and networking.",
+            "source": "./",
+            "strict": false,
+            "skills": [
+                "./SKILL.md"
+            ]
+        }
+    ]
+}
