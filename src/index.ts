@@ -5,6 +5,7 @@ import { architectureRules } from './rules/architecture';
 import { performanceRules } from './rules/performance';
 import { uxRules } from './rules/ux';
 import { privacyRules } from './rules/privacy';
+import { networkingRules } from './rules/networking';
 
 export * from './schema';
 
@@ -14,7 +15,8 @@ export const agentRules: AgentRule[] = [
     ...architectureRules,
     ...performanceRules,
     ...uxRules,
-    ...privacyRules
+    ...privacyRules,
+    ...networkingRules
 ];
 
 export const rulesByCategory = agentRules.reduce((acc, rule) => {

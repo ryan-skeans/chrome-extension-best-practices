@@ -105,5 +105,49 @@ export const uxRules: AgentRule[] = [
             before: "<button tabindex='1'>Click</button>",
             after: "<button tabindex='0'>Click</button>"
         }
+    },
+    {
+        id: "ux.side-panel-ui",
+        domain: "chrome-extension",
+        version: 1,
+        category: "ux",
+        impact: "medium",
+        confidence: 0.8,
+        appliesTo: ["manifest", "side-panel"],
+        detection: {
+            signals: ["side_panel", "sidePanel"],
+            filePatterns: ["manifest.json", "**/*.js", "**/*.ts"],
+            manifestKeys: ["side_panel"]
+        },
+        summary: "Use Side Panel API for persistent companion UIs",
+        rationale: "The Side Panel API (Chrome 114+) provides a persistent UI alongside web content, ideal for tools that users reference while browsing. Unlike popups, side panels remain open across navigation and provide more screen space.",
+        recommendation: {
+            action: "Declare side panel in manifest for companion UI experiences",
+            before: "\"action\": { \"default_popup\": \"panel.html\" } // Closes on click outside",
+            after: "\"side_panel\": { \"default_path\": \"panel.html\" } // Persists while browsing"
+        },
+        references: ["https://developer.chrome.com/docs/extensions/reference/api/sidePanel"]
+    },
+    {
+        id: "ux.keyboard-shortcuts",
+        domain: "chrome-extension",
+        version: 1,
+        category: "ux",
+        impact: "low",
+        confidence: 0.7,
+        appliesTo: ["manifest"],
+        detection: {
+            signals: ["commands", "_execute_action"],
+            filePatterns: ["manifest.json"],
+            manifestKeys: ["commands"]
+        },
+        summary: "Provide configurable keyboard shortcuts",
+        rationale: "Power users expect keyboard shortcuts for frequently used actions. The commands API allows users to customize shortcuts via chrome://extensions/shortcuts, improving accessibility and efficiency.",
+        recommendation: {
+            action: "Define commands in manifest for key extension actions",
+            before: "// No keyboard shortcuts defined",
+            after: "\"commands\": {\n  \"_execute_action\": {\n    \"suggested_key\": { \"default\": \"Ctrl+Shift+Y\" },\n    \"description\": \"Open extension\"\n  }\n}"
+        },
+        references: ["https://developer.chrome.com/docs/extensions/reference/api/commands"]
     }
 ];

@@ -21,6 +21,7 @@ const architecture_1 = require("./rules/architecture");
 const performance_1 = require("./rules/performance");
 const ux_1 = require("./rules/ux");
 const privacy_1 = require("./rules/privacy");
+const networking_1 = require("./rules/networking");
 __exportStar(require("./schema"), exports);
 exports.agentRules = [
     ...permissions_1.permissionRules,
@@ -28,7 +29,8 @@ exports.agentRules = [
     ...architecture_1.architectureRules,
     ...performance_1.performanceRules,
     ...ux_1.uxRules,
-    ...privacy_1.privacyRules
+    ...privacy_1.privacyRules,
+    ...networking_1.networkingRules
 ];
 exports.rulesByCategory = exports.agentRules.reduce((acc, rule) => {
     if (!acc[rule.category]) {

@@ -5,7 +5,8 @@ export type RuleCategory =
     | "performance"
     | "ux"
     | "privacy"
-    | "store-compliance";
+    | "store-compliance"
+    | "networking";
 
 export type RuleImpact = "high" | "medium" | "low";
 
@@ -14,7 +15,8 @@ export type ExtensionContext =
     | "service-worker"
     | "content-script"
     | "popup"
-    | "options-page";
+    | "options-page"
+    | "side-panel";
 
 export interface DetectionHints {
     signals: string[];

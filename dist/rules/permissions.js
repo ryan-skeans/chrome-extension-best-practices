@@ -60,12 +60,13 @@ exports.permissionRules = [
             manifestKeys: ["permissions"]
         },
         summary: "Prefer activeTab over broad tabs or host permissions",
-        rationale: "The activeTab permission grants temporary access to the current tab only when the user invokes the extension, avoiding the need for permanent host permissions.",
+        rationale: "The activeTab permission grants temporary access to the current tab only when the user invokes the extension (via click, keyboard shortcut, or context menu). This avoids permanent host permissions and reduces user friction. Note: 'tabs' permission is still needed if you require tab.url/title without a user gesture.",
         recommendation: {
             action: "Replace 'tabs' or host permissions with 'activeTab' where interactive access is sufficient",
             before: "\"permissions\": [\"tabs\"]",
             after: "\"permissions\": [\"activeTab\"]"
-        }
+        },
+        references: ["https://developer.chrome.com/docs/extensions/reference/api/tabs#manifest"]
     },
     {
         id: "permissions.clipboard-access",
@@ -87,5 +88,27 @@ exports.permissionRules = [
             before: "\"permissions\": [\"clipboardRead\"]",
             after: "// Use navigator.clipboard.readText() inside a user-triggered event handler"
         }
+    },
+    {
+        id: "permissions.optional-permissions",
+        domain: "chrome-extension",
+        version: 1,
+        category: "permissions",
+        impact: "medium",
+        confidence: 0.8,
+        appliesTo: ["manifest"],
+        detection: {
+            signals: ["permissions"],
+            filePatterns: ["manifest.json"],
+            manifestKeys: ["permissions", "optional_permissions"]
+        },
+        summary: "Use optional_permissions for non-critical features",
+        rationale: "Optional permissions are requested at runtime when the user needs the feature, rather than at install time. This reduces friction during installation and follows the principle of least privilege. Users are more likely to install extensions that request fewer upfront permissions.",
+        recommendation: {
+            action: "Move non-essential permissions to optional_permissions",
+            before: "\"permissions\": [\"storage\", \"tabs\", \"downloads\", \"bookmarks\"]",
+            after: "\"permissions\": [\"storage\"],\n\"optional_permissions\": [\"tabs\", \"downloads\", \"bookmarks\"]"
+        },
+        references: ["https://developer.chrome.com/docs/extensions/reference/api/permissions"]
     }
 ];

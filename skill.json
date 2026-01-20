@@ -1,7 +1,7 @@
 {
     "name": "chrome-extension-best-practices",
     "domain": "chrome-extension",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Expert guidance and rules for building Manifest V3 Chrome Extensions, designed for AI coding agents.",
     "main": "dist/agent-rules.json",
     "schema": "dist/schema.d.ts"

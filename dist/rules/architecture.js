@@ -16,13 +16,13 @@ exports.architectureRules = [
             manifestKeys: ["background"]
         },
         summary: "Ensure service worker is event-driven",
-        rationale: "Service workers are ephemeral and terminate when idle (typically after 30 seconds). Using setTimeout or setInterval for longer delays will fail when the worker sleeps.",
+        rationale: "Service workers are ephemeral and terminate after ~30 seconds of inactivity. Individual requests have a 5-minute timeout. Using setTimeout or setInterval for delays beyond these limits will fail when the worker terminates. Use chrome.alarms API for scheduling, and persist state to storage.",
         recommendation: {
             action: "Use the chrome.alarms API for scheduling tasks",
             before: "setInterval(checkUpdates, 60000);",
             after: "chrome.alarms.create('checkUpdates', { periodInMinutes: 1 }); chrome.alarms.onAlarm.addListener((a) => { if(a.name === 'checkUpdates') checkUpdates(); });"
         },
-        references: ["https://developer.chrome.com/docs/extensions/mv3/service_workers/"]
+        references: ["https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle"]
     },
     {
         id: "architecture.no-global-state",
@@ -107,5 +107,71 @@ exports.architectureRules = [
             before: "async function init() { chrome.runtime.onMessage.addListener(...) }",
             after: "chrome.runtime.onMessage.addListener(...)"
         }
+    },
+    {
+        id: "architecture.use-storage-session",
+        domain: "chrome-extension",
+        version: 1,
+        category: "architecture",
+        impact: "medium",
+        confidence: 0.8,
+        appliesTo: ["service-worker"],
+        detection: {
+            signals: ["chrome.storage.local", "let ", "var "],
+            filePatterns: ["background.js", "service-worker.js", "**/*.ts"],
+            manifestKeys: []
+        },
+        summary: "Use storage.session for service worker state",
+        rationale: "chrome.storage.session provides in-memory storage that persists across service worker restarts within the same browser session. Unlike storage.local, it doesn't persist to disk and is cleared when the browser closes, making it ideal for temporary runtime state.",
+        recommendation: {
+            action: "Use storage.session for transient service worker state",
+            before: "let cachedData = null; // Lost on SW restart",
+            after: "await chrome.storage.session.set({ cachedData: data });\nconst { cachedData } = await chrome.storage.session.get('cachedData');"
+        },
+        references: ["https://developer.chrome.com/docs/extensions/reference/api/storage#property-session"]
+    },
+    {
+        id: "architecture.on-installed-handler",
+        domain: "chrome-extension",
+        version: 1,
+        category: "architecture",
+        impact: "medium",
+        confidence: 0.9,
+        appliesTo: ["service-worker"],
+        detection: {
+            signals: ["chrome.runtime.onInstalled"],
+            filePatterns: ["background.js", "service-worker.js", "**/*.ts"],
+            manifestKeys: []
+        },
+        summary: "Use onInstalled for one-time initialization",
+        rationale: "The chrome.runtime.onInstalled event fires once on install, update, or Chrome update. Use it for one-time setup like creating context menus, setting default storage values, or opening an onboarding page. Don't put initialization logic that should run on every service worker start.",
+        recommendation: {
+            action: "Set up one-time initialization in onInstalled handler",
+            before: "// Context menu created every time SW starts\nchrome.contextMenus.create({ id: 'myMenu', title: 'My Menu' });",
+            after: "chrome.runtime.onInstalled.addListener(() => {\n  chrome.contextMenus.create({ id: 'myMenu', title: 'My Menu' });\n});"
+        },
+        references: ["https://developer.chrome.com/docs/extensions/reference/api/runtime#event-onInstalled"]
+    },
+    {
+        id: "architecture.promise-based-apis",
+        domain: "chrome-extension",
+        version: 1,
+        category: "architecture",
+        impact: "low",
+        confidence: 0.8,
+        appliesTo: ["service-worker", "popup", "options-page", "content-script"],
+        detection: {
+            signals: ["chrome.", "function(", "callback"],
+            filePatterns: ["**/*.js", "**/*.ts"],
+            manifestKeys: []
+        },
+        summary: "Prefer async/await over callbacks for chrome.* APIs",
+        rationale: "All chrome.* APIs in MV3 support Promises. Using async/await leads to cleaner, more maintainable code and better error handling compared to callback-based patterns.",
+        recommendation: {
+            action: "Use async/await with chrome.* APIs",
+            before: "chrome.storage.local.get(['key'], (result) => { console.log(result.key); });",
+            after: "const { key } = await chrome.storage.local.get(['key']);\nconsole.log(key);"
+        },
+        references: ["https://developer.chrome.com/docs/extensions/develop/migrate/api-calls"]
     }
 ];

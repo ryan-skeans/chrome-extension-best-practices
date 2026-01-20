@@ -88,12 +88,15 @@
       ]
     },
     "summary": "Prefer activeTab over broad tabs or host permissions",
-    "rationale": "The activeTab permission grants temporary access to the current tab only when the user invokes the extension, avoiding the need for permanent host permissions.",
+    "rationale": "The activeTab permission grants temporary access to the current tab only when the user invokes the extension (via click, keyboard shortcut, or context menu). This avoids permanent host permissions and reduces user friction. Note: 'tabs' permission is still needed if you require tab.url/title without a user gesture.",
     "recommendation": {
       "action": "Replace 'tabs' or host permissions with 'activeTab' where interactive access is sufficient",
       "before": "\"permissions\": [\"tabs\"]",
       "after": "\"permissions\": [\"activeTab\"]"
-    }
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/api/tabs#manifest"
+    ]
   },
   {
     "id": "permissions.clipboard-access",
@@ -124,6 +127,39 @@
       "before": "\"permissions\": [\"clipboardRead\"]",
       "after": "// Use navigator.clipboard.readText() inside a user-triggered event handler"
     }
+  },
+  {
+    "id": "permissions.optional-permissions",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "permissions",
+    "impact": "medium",
+    "confidence": 0.8,
+    "appliesTo": [
+      "manifest"
+    ],
+    "detection": {
+      "signals": [
+        "permissions"
+      ],
+      "filePatterns": [
+        "manifest.json"
+      ],
+      "manifestKeys": [
+        "permissions",
+        "optional_permissions"
+      ]
+    },
+    "summary": "Use optional_permissions for non-critical features",
+    "rationale": "Optional permissions are requested at runtime when the user needs the feature, rather than at install time. This reduces friction during installation and follows the principle of least privilege. Users are more likely to install extensions that request fewer upfront permissions.",
+    "recommendation": {
+      "action": "Move non-essential permissions to optional_permissions",
+      "before": "\"permissions\": [\"storage\", \"tabs\", \"downloads\", \"bookmarks\"]",
+      "after": "\"permissions\": [\"storage\"],\n\"optional_permissions\": [\"tabs\", \"downloads\", \"bookmarks\"]"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/api/permissions"
+    ]
   },
   {
     "id": "security.no-remote-code",
@@ -322,6 +358,143 @@
     }
   },
   {
+    "id": "security.web-accessible-resources-restrict",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "security",
+    "impact": "high",
+    "confidence": 0.9,
+    "appliesTo": [
+      "manifest"
+    ],
+    "detection": {
+      "signals": [
+        "web_accessible_resources",
+        "\"matches\": [\"<all_urls>\"]"
+      ],
+      "filePatterns": [
+        "manifest.json"
+      ],
+      "manifestKeys": [
+        "web_accessible_resources"
+      ]
+    },
+    "summary": "Restrict web_accessible_resources to specific origins",
+    "rationale": "Web accessible resources can be loaded by any website if not restricted, enabling fingerprinting attacks and potential XSS if the resources have vulnerabilities. Always specify exact origin matches and consider using use_dynamic_url for anti-fingerprinting.",
+    "recommendation": {
+      "action": "Add matches array to restrict which sites can access resources",
+      "before": "\"web_accessible_resources\": [{ \"resources\": [\"script.js\"], \"matches\": [\"<all_urls>\"] }]",
+      "after": "\"web_accessible_resources\": [{ \"resources\": [\"script.js\"], \"matches\": [\"https://trusted-site.com/*\"], \"use_dynamic_url\": true }]"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/manifest/web-accessible-resources"
+    ]
+  },
+  {
+    "id": "security.externally-connectable-restrict",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "security",
+    "impact": "high",
+    "confidence": 0.9,
+    "appliesTo": [
+      "manifest"
+    ],
+    "detection": {
+      "signals": [
+        "externally_connectable",
+        "\"matches\": [\"*://*/*\"]"
+      ],
+      "filePatterns": [
+        "manifest.json"
+      ],
+      "manifestKeys": [
+        "externally_connectable"
+      ]
+    },
+    "summary": "Restrict externally_connectable to specific domains",
+    "rationale": "The externally_connectable manifest key allows web pages to send messages to your extension. Using broad patterns exposes your extension to attacks from malicious websites. Always specify exact domains that need to communicate with your extension.",
+    "recommendation": {
+      "action": "Specify exact domains in externally_connectable matches",
+      "before": "\"externally_connectable\": { \"matches\": [\"*://*.example.com/*\"] }",
+      "after": "\"externally_connectable\": { \"matches\": [\"https://app.example.com/*\"] }"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/develop/concepts/messaging#external-webpage"
+    ]
+  },
+  {
+    "id": "security.avoid-eval-patterns",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "security",
+    "impact": "high",
+    "confidence": 1,
+    "appliesTo": [
+      "service-worker",
+      "content-script",
+      "popup",
+      "options-page"
+    ],
+    "detection": {
+      "signals": [
+        "eval(",
+        "new Function(",
+        "setTimeout(\"",
+        "setInterval(\""
+      ],
+      "filePatterns": [
+        "**/*.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": []
+    },
+    "summary": "Avoid eval and eval-like patterns",
+    "rationale": "eval(), new Function(), and setTimeout/setInterval with string arguments execute arbitrary code and are prohibited in MV3. These patterns create security vulnerabilities and will cause CSP violations.",
+    "recommendation": {
+      "action": "Replace eval patterns with safe alternatives",
+      "before": "setTimeout(\"doSomething(\" + id + \")\", 100);",
+      "after": "setTimeout(() => doSomething(id), 100);"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/develop/migrate/improve-security"
+    ]
+  },
+  {
+    "id": "security.sanitize-content-script-input",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "security",
+    "impact": "high",
+    "confidence": 0.8,
+    "appliesTo": [
+      "content-script"
+    ],
+    "detection": {
+      "signals": [
+        "document.getElementById",
+        "document.querySelector",
+        "getAttribute"
+      ],
+      "filePatterns": [
+        "content.js",
+        "content-script.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": []
+    },
+    "summary": "Sanitize all data extracted from web pages",
+    "rationale": "Content scripts run in the context of potentially malicious web pages. Any data read from the DOM (element text, attributes, etc.) should be treated as untrusted and validated before use, especially before passing to the service worker or using in privileged operations.",
+    "recommendation": {
+      "action": "Validate and sanitize DOM-extracted data before use",
+      "before": "const data = document.getElementById('data').textContent;\nchrome.runtime.sendMessage({ payload: data });",
+      "after": "const data = document.getElementById('data')?.textContent || '';\nconst sanitized = data.slice(0, 1000); // Limit size\nif (isValidFormat(sanitized)) { chrome.runtime.sendMessage({ payload: sanitized }); }"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts#security"
+    ]
+  },
+  {
     "id": "architecture.event-driven-sw",
     "domain": "chrome-extension",
     "version": 1,
@@ -346,14 +519,14 @@
       ]
     },
     "summary": "Ensure service worker is event-driven",
-    "rationale": "Service workers are ephemeral and terminate when idle (typically after 30 seconds). Using setTimeout or setInterval for longer delays will fail when the worker sleeps.",
+    "rationale": "Service workers are ephemeral and terminate after ~30 seconds of inactivity. Individual requests have a 5-minute timeout. Using setTimeout or setInterval for delays beyond these limits will fail when the worker terminates. Use chrome.alarms API for scheduling, and persist state to storage.",
     "recommendation": {
       "action": "Use the chrome.alarms API for scheduling tasks",
       "before": "setInterval(checkUpdates, 60000);",
       "after": "chrome.alarms.create('checkUpdates', { periodInMinutes: 1 }); chrome.alarms.onAlarm.addListener((a) => { if(a.name === 'checkUpdates') checkUpdates(); });"
     },
     "references": [
-      "https://developer.chrome.com/docs/extensions/mv3/service_workers/"
+      "https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle"
     ]
   },
   {
@@ -473,6 +646,108 @@
       "before": "async function init() { chrome.runtime.onMessage.addListener(...) }",
       "after": "chrome.runtime.onMessage.addListener(...)"
     }
+  },
+  {
+    "id": "architecture.use-storage-session",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "architecture",
+    "impact": "medium",
+    "confidence": 0.8,
+    "appliesTo": [
+      "service-worker"
+    ],
+    "detection": {
+      "signals": [
+        "chrome.storage.local",
+        "let ",
+        "var "
+      ],
+      "filePatterns": [
+        "background.js",
+        "service-worker.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": []
+    },
+    "summary": "Use storage.session for service worker state",
+    "rationale": "chrome.storage.session provides in-memory storage that persists across service worker restarts within the same browser session. Unlike storage.local, it doesn't persist to disk and is cleared when the browser closes, making it ideal for temporary runtime state.",
+    "recommendation": {
+      "action": "Use storage.session for transient service worker state",
+      "before": "let cachedData = null; // Lost on SW restart",
+      "after": "await chrome.storage.session.set({ cachedData: data });\nconst { cachedData } = await chrome.storage.session.get('cachedData');"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/api/storage#property-session"
+    ]
+  },
+  {
+    "id": "architecture.on-installed-handler",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "architecture",
+    "impact": "medium",
+    "confidence": 0.9,
+    "appliesTo": [
+      "service-worker"
+    ],
+    "detection": {
+      "signals": [
+        "chrome.runtime.onInstalled"
+      ],
+      "filePatterns": [
+        "background.js",
+        "service-worker.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": []
+    },
+    "summary": "Use onInstalled for one-time initialization",
+    "rationale": "The chrome.runtime.onInstalled event fires once on install, update, or Chrome update. Use it for one-time setup like creating context menus, setting default storage values, or opening an onboarding page. Don't put initialization logic that should run on every service worker start.",
+    "recommendation": {
+      "action": "Set up one-time initialization in onInstalled handler",
+      "before": "// Context menu created every time SW starts\nchrome.contextMenus.create({ id: 'myMenu', title: 'My Menu' });",
+      "after": "chrome.runtime.onInstalled.addListener(() => {\n  chrome.contextMenus.create({ id: 'myMenu', title: 'My Menu' });\n});"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/api/runtime#event-onInstalled"
+    ]
+  },
+  {
+    "id": "architecture.promise-based-apis",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "architecture",
+    "impact": "low",
+    "confidence": 0.8,
+    "appliesTo": [
+      "service-worker",
+      "popup",
+      "options-page",
+      "content-script"
+    ],
+    "detection": {
+      "signals": [
+        "chrome.",
+        "function(",
+        "callback"
+      ],
+      "filePatterns": [
+        "**/*.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": []
+    },
+    "summary": "Prefer async/await over callbacks for chrome.* APIs",
+    "rationale": "All chrome.* APIs in MV3 support Promises. Using async/await leads to cleaner, more maintainable code and better error handling compared to callback-based patterns.",
+    "recommendation": {
+      "action": "Use async/await with chrome.* APIs",
+      "before": "chrome.storage.local.get(['key'], (result) => { console.log(result.key); });",
+      "after": "const { key } = await chrome.storage.local.get(['key']);\nconsole.log(key);"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/develop/migrate/api-calls"
+    ]
   },
   {
     "id": "performance.programmatic-injection",
@@ -751,6 +1026,75 @@
     }
   },
   {
+    "id": "ux.side-panel-ui",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "ux",
+    "impact": "medium",
+    "confidence": 0.8,
+    "appliesTo": [
+      "manifest",
+      "side-panel"
+    ],
+    "detection": {
+      "signals": [
+        "side_panel",
+        "sidePanel"
+      ],
+      "filePatterns": [
+        "manifest.json",
+        "**/*.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": [
+        "side_panel"
+      ]
+    },
+    "summary": "Use Side Panel API for persistent companion UIs",
+    "rationale": "The Side Panel API (Chrome 114+) provides a persistent UI alongside web content, ideal for tools that users reference while browsing. Unlike popups, side panels remain open across navigation and provide more screen space.",
+    "recommendation": {
+      "action": "Declare side panel in manifest for companion UI experiences",
+      "before": "\"action\": { \"default_popup\": \"panel.html\" } // Closes on click outside",
+      "after": "\"side_panel\": { \"default_path\": \"panel.html\" } // Persists while browsing"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/api/sidePanel"
+    ]
+  },
+  {
+    "id": "ux.keyboard-shortcuts",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "ux",
+    "impact": "low",
+    "confidence": 0.7,
+    "appliesTo": [
+      "manifest"
+    ],
+    "detection": {
+      "signals": [
+        "commands",
+        "_execute_action"
+      ],
+      "filePatterns": [
+        "manifest.json"
+      ],
+      "manifestKeys": [
+        "commands"
+      ]
+    },
+    "summary": "Provide configurable keyboard shortcuts",
+    "rationale": "Power users expect keyboard shortcuts for frequently used actions. The commands API allows users to customize shortcuts via chrome://extensions/shortcuts, improving accessibility and efficiency.",
+    "recommendation": {
+      "action": "Define commands in manifest for key extension actions",
+      "before": "// No keyboard shortcuts defined",
+      "after": "\"commands\": {\n  \"_execute_action\": {\n    \"suggested_key\": { \"default\": \"Ctrl+Shift+Y\" },\n    \"description\": \"Open extension\"\n  }\n}"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/api/commands"
+    ]
+  },
+  {
     "id": "privacy.minimize-data-collection",
     "domain": "chrome-extension",
     "version": 1,
@@ -870,5 +1214,219 @@
       "before": "\"permissions\": [\"tabs\", \"storage\", \"management\"]",
       "after": "\"permissions\": [\"storage\"]"
     }
+  },
+  {
+    "id": "store-compliance.no-obfuscated-code",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "store-compliance",
+    "impact": "high",
+    "confidence": 1,
+    "appliesTo": [
+      "manifest",
+      "service-worker",
+      "content-script",
+      "popup"
+    ],
+    "detection": {
+      "signals": [
+        "eval",
+        "atob",
+        "String.fromCharCode",
+        "_0x"
+      ],
+      "filePatterns": [
+        "**/*.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": []
+    },
+    "summary": "No obfuscated or minified code that hides functionality",
+    "rationale": "The Chrome Web Store prohibits code obfuscation. All code must be human-readable. Minification is allowed if it only removes whitespace/comments, but obfuscation that conceals functionality (like variable mangling or string encoding) will result in rejection.",
+    "recommendation": {
+      "action": "Use readable code or simple minification without obfuscation",
+      "before": "var _0x1a2b=['log'];(function(_0x2d8f){...",
+      "after": "console.log('Hello'); // Clear, readable code"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/webstore/program-policies/code-readability/"
+    ]
+  },
+  {
+    "id": "store-compliance.privacy-policy-required",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "store-compliance",
+    "impact": "high",
+    "confidence": 1,
+    "appliesTo": [
+      "manifest"
+    ],
+    "detection": {
+      "signals": [
+        "storage",
+        "cookies",
+        "history",
+        "tabs"
+      ],
+      "filePatterns": [
+        "manifest.json"
+      ],
+      "manifestKeys": [
+        "permissions"
+      ]
+    },
+    "summary": "Privacy policy required when collecting user data",
+    "rationale": "Extensions that access user data (storage, cookies, browsing history, etc.) must provide a valid privacy policy URL in the Chrome Web Store listing. The policy must describe what data is collected, how it's used, and how it's shared.",
+    "recommendation": {
+      "action": "Add privacy policy URL to Chrome Web Store listing",
+      "before": "// No privacy policy provided",
+      "after": "// Add privacy policy URL in Developer Dashboard under 'Privacy' tab"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/webstore/program-policies/user-data-faq/"
+    ]
+  },
+  {
+    "id": "store-compliance.accurate-listing",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "store-compliance",
+    "impact": "high",
+    "confidence": 0.7,
+    "appliesTo": [
+      "manifest"
+    ],
+    "detection": {
+      "signals": [
+        "name",
+        "description"
+      ],
+      "filePatterns": [
+        "manifest.json"
+      ],
+      "manifestKeys": [
+        "name",
+        "description"
+      ]
+    },
+    "summary": "Extension behavior must match store listing",
+    "rationale": "As of 2024, all elements in your product listing (description, screenshots, videos) must accurately represent the extension's functionality. Extensions that behave differently than described face removal from the Chrome Web Store.",
+    "recommendation": {
+      "action": "Ensure manifest description and store listing accurately describe all functionality",
+      "before": "\"description\": \"Simple tab manager\" // but actually injects ads",
+      "after": "\"description\": \"Tab manager with sponsored suggestions\" // accurately describes behavior"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/webstore/program-policies/listing-requirements/"
+    ]
+  },
+  {
+    "id": "networking.declarative-net-request",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "networking",
+    "impact": "high",
+    "confidence": 0.9,
+    "appliesTo": [
+      "manifest",
+      "service-worker"
+    ],
+    "detection": {
+      "signals": [
+        "webRequest",
+        "webRequestBlocking",
+        "chrome.webRequest"
+      ],
+      "filePatterns": [
+        "manifest.json",
+        "**/*.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": [
+        "permissions"
+      ]
+    },
+    "summary": "Prefer declarativeNetRequest over webRequest for blocking",
+    "rationale": "The declarativeNetRequest API is the MV3 replacement for blocking webRequest. It offers better performance (browser-native rule evaluation), improved privacy (no access to request content), and doesn't require broad host permissions for basic blocking.",
+    "recommendation": {
+      "action": "Migrate from webRequest to declarativeNetRequest API",
+      "before": "chrome.webRequest.onBeforeRequest.addListener((details) => { return { cancel: true }; }, { urls: ['*://*.ads.com/*'] }, ['blocking']);",
+      "after": "// Use declarative_net_request in manifest with rule files\n// manifest.json: \"declarative_net_request\": { \"rule_resources\": [{ \"id\": \"ruleset_1\", \"enabled\": true, \"path\": \"rules.json\" }] }"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest"
+    ]
+  },
+  {
+    "id": "networking.static-rulesets-for-blocklists",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "networking",
+    "impact": "medium",
+    "confidence": 0.8,
+    "appliesTo": [
+      "manifest"
+    ],
+    "detection": {
+      "signals": [
+        "declarative_net_request",
+        "updateDynamicRules"
+      ],
+      "filePatterns": [
+        "manifest.json",
+        "**/*.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": [
+        "declarative_net_request"
+      ]
+    },
+    "summary": "Use static rulesets for large, stable blocklists",
+    "rationale": "Static rules (bundled in extension package) have higher limits (up to 330,000 rules across all extensions) compared to dynamic rules (5,000-30,000). Use static rules for core blocking logic that rarely changes, and dynamic rules only for user-configurable or frequently updated filters.",
+    "recommendation": {
+      "action": "Define large blocklists as static rulesets in manifest",
+      "before": "chrome.declarativeNetRequest.updateDynamicRules({ addRules: thousandsOfRules });",
+      "after": "// manifest.json: \"declarative_net_request\": { \"rule_resources\": [{ \"id\": \"blocklist\", \"enabled\": true, \"path\": \"blocklist_rules.json\" }] }"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest#limits"
+    ]
+  },
+  {
+    "id": "networking.cors-service-worker",
+    "domain": "chrome-extension",
+    "version": 1,
+    "category": "networking",
+    "impact": "medium",
+    "confidence": 0.7,
+    "appliesTo": [
+      "service-worker"
+    ],
+    "detection": {
+      "signals": [
+        "fetch(",
+        "XMLHttpRequest",
+        "mode: 'no-cors'"
+      ],
+      "filePatterns": [
+        "background.js",
+        "service-worker.js",
+        "**/*.ts"
+      ],
+      "manifestKeys": [
+        "host_permissions"
+      ]
+    },
+    "summary": "Handle CORS properly in service worker fetch requests",
+    "rationale": "Service workers can make cross-origin requests if host_permissions are declared, but the response mode and headers must be handled correctly. Using 'no-cors' mode returns an opaque response that cannot be read.",
+    "recommendation": {
+      "action": "Declare proper host_permissions and use standard fetch mode",
+      "before": "fetch('https://api.example.com/data', { mode: 'no-cors' })",
+      "after": "// Add \"host_permissions\": [\"https://api.example.com/*\"] to manifest\nfetch('https://api.example.com/data') // CORS works with host_permissions"
+    },
+    "references": [
+      "https://developer.chrome.com/docs/extensions/develop/concepts/network-requests"
+    ]
   }
 ]

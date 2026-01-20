@@ -1,6 +1,6 @@
-export type RuleCategory = "security" | "permissions" | "architecture" | "performance" | "ux" | "privacy" | "store-compliance";
+export type RuleCategory = "security" | "permissions" | "architecture" | "performance" | "ux" | "privacy" | "store-compliance" | "networking";
 export type RuleImpact = "high" | "medium" | "low";
-export type ExtensionContext = "manifest" | "service-worker" | "content-script" | "popup" | "options-page";
+export type ExtensionContext = "manifest" | "service-worker" | "content-script" | "popup" | "options-page" | "side-panel";
 export interface DetectionHints {
     signals: string[];
     filePatterns: string[];
